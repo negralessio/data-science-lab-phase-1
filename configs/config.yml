@@ -74,7 +74,7 @@ feature_engineering:
         skip: false
         method: "minmax"
     feature_selection: 
-        skip: false
+        skip: true
         method: "RFECV"
         k: 20
         step: 5
