@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import mlflow
 
 import modelling
 from data_cleaning import drop_correlated_features
@@ -295,6 +296,22 @@ def make_prediction(cfg, model, test_data_cleaned, result_path):
                               verbose=cfg["modelling"]["verbosity"])
 
 
+def log_model_eval(model, cv_results):
+    """
+    Function that logs the model evaluation to the MLflow run registry
+    :param model: Fitted model
+    :param cv_results: Cross validation results
+    :return: None
+    """
+    print("Logging model results to mlflow registry ...")
+
+    #mlflow.log_params(model.get_xgb_params())
+    mlflow.log_metric(key="CV Test MCC MEAN", value=round(cv_results['test_matthews_corrcoef'].mean(), 4))
+    mlflow.log_metric(key="CV Test MCC STD", value=round(cv_results['test_matthews_corrcoef'].std(), 4))
+    mlflow.log_metric(key="CV Test ACC MEAN", value=round(cv_results['test_accuracy'].mean(), 4))
+    mlflow.log_metric(key="CV Test ACC STD", value=round(cv_results['test_accuracy'].std(), 4))
+
+
 def main(cfg):
     """
     Main function that executes the pipeline, i.e. ...
@@ -304,6 +321,7 @@ def main(cfg):
     - Perform Feature Selection (Default: RFECV)
     - Reduce Dimensionality using PCA (Default: skipped)
     - Train Model
+    - Log model results using mlflow
     - Make Prediction
     :param cfg: Parsed config file
     :return: None
@@ -327,8 +345,14 @@ def main(cfg):
     # Reduce Dimensionality
     train_data_cleaned, test_data_cleaned = reduce_dimensionality(cfg, best_feats,
                                                                   train_data_cleaned, test_data_cleaned)
-    # Perform CV and train final estimator
-    model, cv_results = train_model(cfg, train_data_cleaned, train_labels)
+
+    # Log model results
+    mlflow.xgboost.autolog(log_models=False)
+    with mlflow.start_run(tags={"train_set_size": len(train_data_cleaned)}):
+        # Perform CV and train final estimator
+        model, cv_results = train_model(cfg, train_data_cleaned, train_labels)
+        log_model_eval(model, cv_results)
+
     # Make Prediction on Test Set and save data
     make_prediction(cfg, model, test_data_cleaned, result_path)
 
