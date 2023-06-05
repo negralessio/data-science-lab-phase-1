@@ -31,7 +31,7 @@ def parse_args():
 
     # Load config file
     cfg = load_config(args.config)
-    return cfg
+    return cfg, args.config
 
 
 def load_data(cfg):
@@ -61,9 +61,9 @@ def load_data(cfg):
     test_values = pd.read_csv(test_values_path).set_index("building_id")
 
     """ Make Sample Size smaller for experimenting and testing; Keep commented! 
-    #train_values = train_values.iloc[:1000]
-    #train_labels = train_labels.iloc[:1000]
-    #test_values = test_values.iloc[:1000]
+    # train_values = train_values.iloc[:1000]
+    # train_labels = train_labels.iloc[:1000]
+    # test_values = test_values.iloc[:1000]
     """
 
     return train_values, train_labels, test_values, result_path
@@ -297,16 +297,19 @@ def make_prediction(cfg, model, test_data_cleaned, result_path):
                               verbose=cfg["modelling"]["verbosity"])
 
 
-def log_model_eval(model, cv_results):
+def log_model_eval(model, cv_results, config_path):
     """
     Function that logs the model evaluation to the MLflow run registry
     :param model: Fitted model
     :param cv_results: Cross validation results
     :return: None
     """
-    print("Logging model results to mlflow registry ...")
+    print("Logging model results and specifications to mlflow registry ...")
 
-    #mlflow.log_params(model.get_xgb_params())
+    # Log config file
+    mlflow.log_artifact(local_path=config_path)
+
+    # Log metrics
     mlflow.log_metric(key="CV Test MCC MEAN", value=round(cv_results['test_matthews_corrcoef'].mean(), 4))
     mlflow.log_metric(key="CV Test MCC STD", value=round(cv_results['test_matthews_corrcoef'].std(), 4))
     mlflow.log_metric(key="CV Test ACC MEAN", value=round(cv_results['test_accuracy'].mean(), 4))
@@ -327,7 +330,7 @@ def get_mlflow_tags(cfg, train_data_cleaned) -> dict:
     return tags
 
 
-def main(cfg):
+def main(cfg, config_path):
     """
     Main function that executes the pipeline, i.e. ...
     - Load data
@@ -366,7 +369,7 @@ def main(cfg):
     with mlflow.start_run(tags=get_mlflow_tags(cfg, train_data_cleaned)):
         # Perform CV and train final estimator
         model, cv_results = train_model(cfg, train_data_cleaned, train_labels)
-        log_model_eval(model, cv_results)
+        log_model_eval(model, cv_results, config_path)
 
     # Make Prediction on Test Set and save data
     make_prediction(cfg, model, test_data_cleaned, result_path)
@@ -378,8 +381,8 @@ def main(cfg):
 
 if __name__== "__main__":
     # Parse config file
-    cfg = parse_args()
+    cfg, config_path = parse_args()
 
     # Call Pipeline
-    main(cfg)
+    main(cfg, config_path)
 
