@@ -60,10 +60,11 @@ def load_data(cfg):
     train_labels = pd.read_csv(train_labels_path).set_index("building_id")
     test_values = pd.read_csv(test_values_path).set_index("building_id")
 
-    """ Make Sample Size smaller for experimenting and testing; Keep commented! """
-    train_values = train_values.iloc[:1000]
-    train_labels = train_labels.iloc[:1000]
-    test_values = test_values.iloc[:1000]
+    """ Make Sample Size smaller for experimenting and testing; Keep commented! 
+    #train_values = train_values.iloc[:1000]
+    #train_labels = train_labels.iloc[:1000]
+    #test_values = test_values.iloc[:1000]
+    """
 
     return train_values, train_labels, test_values, result_path
 
@@ -312,6 +313,20 @@ def log_model_eval(model, cv_results):
     mlflow.log_metric(key="CV Test ACC STD", value=round(cv_results['test_accuracy'].std(), 4))
 
 
+def get_mlflow_tags(cfg, train_data_cleaned) -> dict:
+    """
+    Function to define tags for the mlflow run
+    :param cfg: Parsed config file
+    :param train_data_cleaned:
+    :return: Dictionary of tags
+    """
+    tags = {"train_set_size": len(train_data_cleaned),
+     "normalization_method": cfg["feature_engineering"]["normalize"]["method"],
+     "rfecv_skipped": cfg["feature_engineering"]["feature_selection"]["skip"]}
+
+    return tags
+
+
 def main(cfg):
     """
     Main function that executes the pipeline, i.e. ...
@@ -348,7 +363,7 @@ def main(cfg):
 
     # Log model results
     mlflow.xgboost.autolog(log_models=False)
-    with mlflow.start_run(tags={"train_set_size": len(train_data_cleaned)}):
+    with mlflow.start_run(tags=get_mlflow_tags(cfg, train_data_cleaned)):
         # Perform CV and train final estimator
         model, cv_results = train_model(cfg, train_data_cleaned, train_labels)
         log_model_eval(model, cv_results)
