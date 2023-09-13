@@ -1,0 +1,98 @@
+paths:
+    train_values: "data/raw/train_values.csv"
+    train_labels: "data/raw/train_labels.csv"
+    test_values: "data/raw/test_values.csv"
+    geocoded_districts: "data/processed/geocoded_districts_affected.csv"
+    result: "data/predictions/targaryen_prediction.csv"
+data_cleaning:
+    columns_to_remove: ['has_secondary_use_rental',
+                        'has_secondary_use_institution',
+                        'has_secondary_use_school',
+                        'has_secondary_use_industry',
+                        'has_secondary_use_health_post',
+                        'has_secondary_use_gov_office',
+                        'has_secondary_use_use_police',
+                        'has_secondary_use_other']
+    columns_to_ignore: ["building_id",
+                        "geo_level_1_id",
+                        "geo_level_2_id",
+                        "geo_level_3_id",
+                        "damage_grade",
+                        "count_floors_pre_eq",
+                        "count_families"]
+    correlations: 
+        - feature_names: ["geo_level_1_id",
+                          "geo_level_2_id",
+                          "geo_level_3_id",
+                          "count_floors_pre_eq",
+                          "age",
+                          "area_percentage",
+                          "height_percentage",
+                          "count_families"]
+          threshold: 0.7
+          method: "Pearson"
+        - feature_names: ["land_surface_condition",
+                          "foundation_type",
+                          "roof_type",
+                          "ground_floor_type",
+                          "other_floor_type",
+                          "position",
+                          "plan_configuration",
+                          "legal_ownership_status",
+                          "has_superstructure_adobe_mud",
+                          "has_superstructure_mud_mortar_stone",
+                          "has_superstructure_stone_flag",
+                          "has_superstructure_cement_mortar_stone",
+                          "has_superstructure_mud_mortar_brick",
+                          "has_superstructure_cement_mortar_brick",
+                          "has_superstructure_timber",
+                          "has_superstructure_bamboo",
+                          "has_superstructure_rc_non_engineered",
+                          "has_superstructure_rc_engineered",
+                          "has_superstructure_other",
+                          "has_secondary_use",
+                          "has_secondary_use_agriculture",
+                          "has_secondary_use_hotel"]
+          threshold: 0.7
+          method: "MCC"
+feature_engineering:
+    geocode_districts:
+        skip: false
+        drop_key: false
+        path: "data/processed/geocoded_districts_affected.csv"
+    group_categorical: 
+        skip: false
+    risk_status: 
+        skip: true
+        geo_level: 1
+    superstructure_quality: 
+        skip: false
+    categorical_encoding: 
+        skip: false
+        method: "One-Hot"
+    normalize: 
+        skip: false
+        method: "minmax"
+    feature_selection: 
+        skip: false
+        method: "RFECV"
+        k: 20
+        step: 5
+    dimensionality_reduction:
+        skip: true
+        feature_threshold: 25
+        method: "PCA"
+        n_components: 0.7
+        n_neighbors: None
+modelling: 
+    scoring: ["accuracy", "matthews_corrcoef"]
+    verbosity: 2
+    params_xgb: {'colsample_bytree': 0.27972729119255346,
+                 'learning_rate': 0.1228007619140701,
+                 'max_depth': 23,
+                 'n_estimators': 144,
+                 'reg_alpha': 1e-09,
+                 'reg_lambda': 18.935672936151313,
+                 'subsample': 1.0,
+                 'random_state': 42,
+                 'n_jobs': -1}
